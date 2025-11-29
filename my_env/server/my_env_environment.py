@@ -11,6 +11,8 @@ A simple test environment that echoes back messages sent to it.
 Perfect for testing HTTP server infrastructure.
 """
 
+import json
+import subprocess
 from uuid import uuid4
 
 from openenv_core.env_server.interfaces import Environment
@@ -67,29 +69,123 @@ class MyEnvironment(Environment):
         )
 
     def step(self, action: MyAction) -> MyObservation:  # type: ignore[override]
-        """
-        Execute a step in the environment by echoing the message.
+        code = action.code
 
-        Args:
-            action: MyAction containing the message to echo
+        # Parse the JSON string to get HTML content
+        html_content = ""
+        message = "No HTML content"
 
-        Returns:
-            MyObservation with the echoed message and its length
-        """
+        try:
+            parsed_data = json.loads(code)
+            # Search for "index.html" key
+            if "index.html" in parsed_data:
+                html_content = parsed_data["index.html"]
+                message = "Found index.html in JSON"
+            else:
+                message = "index.html key not found in JSON"
+        except json.JSONDecodeError as e:
+            message = f"Invalid JSON format: {str(e)}"
+
+        # Call MCP lighthouse audit and extract performance score
+        reward = 0.0
+        if html_content:
+            try:
+                # First, serve the HTML
+                serve_result = subprocess.run(
+                    ["node", "/app/mcp/dist/index.js"],
+                    input=json.dumps({
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "serve_html",
+                            "arguments": {
+                                "html_content": html_content,
+                                "filename": "index.html"
+                            }
+                        }
+                    }),
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+
+                # Then run lighthouse audit
+                audit_result = subprocess.run(
+                    ["node", "/app/mcp/dist/index.js"],
+                    input=json.dumps({
+                        "jsonrpc": "2.0",
+                        "id": 2,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "audit_with_lighthouse",
+                            "arguments": {
+                                "categories": ["performance"]
+                            }
+                        }
+                    }),
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+
+                # Parse the lighthouse response to extract performance score
+                if audit_result.returncode == 0:
+                    try:
+                        # The MCP server returns JSON-RPC response
+                        response = json.loads(audit_result.stdout)
+
+                        # Extract the result content
+                        if "result" in response and "content" in response["result"]:
+                            content_list = response["result"]["content"]
+                            if content_list and len(content_list) > 0:
+                                # Parse the text content which contains the audit results
+                                audit_json = json.loads(content_list[0]["text"])
+
+                                if audit_json.get("success"):
+                                    # Extract performance score from the audit results
+                                    performance_score = audit_json["audit"]["scores"]["performance"]["score"]
+                                    reward = float(performance_score)
+                                    message = f"Lighthouse audit completed - Performance score: {performance_score}/100"
+                                else:
+                                    message = f"Audit failed: {audit_json.get('error', 'Unknown error')}"
+                                    reward = 0.0
+                        else:
+                            # Direct JSON response (tool output format)
+                            if "success" in response and response["success"]:
+                                performance_score = response["audit"]["scores"]["performance"]["score"]
+                                reward = float(performance_score)
+                                message = f"Lighthouse audit completed - Performance score: {performance_score}/100"
+                            else:
+                                message = "Unexpected response format"
+                                reward = 0.0
+
+                    except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
+                        message = f"Failed to parse lighthouse results: {str(e)}"
+                        reward = 0.0
+                else:
+                    message = f"MCP audit call failed: {audit_result.stderr}"
+                    reward = 0.0
+
+            except subprocess.TimeoutExpired:
+                message = "MCP call timeout"
+            except Exception as e:
+                message = f"Error calling MCP: {str(e)}"
+
+        length = len(html_content)
         self._state.step_count += 1
-
-        message = action.message
-        length = len(message)
-
-        # Simple reward: longer messages get higher rewards
-        reward = length * 0.1
 
         return MyObservation(
             echoed_message=message,
             message_length=length,
             done=False,
             reward=reward,
-            metadata={"original_message": message, "step": self._state.step_count},
+            metadata={
+                "original_message": message,
+                "step": self._state.step_count,
+                "html_length": length,
+                "performance_score": reward
+            },
         )
 
     @property
