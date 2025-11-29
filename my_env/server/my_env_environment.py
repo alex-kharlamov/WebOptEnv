@@ -12,11 +12,12 @@ Perfect for testing HTTP server infrastructure.
 """
 
 import json
-import subprocess
 from uuid import uuid4
 
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
 from openenv_core.env_server.interfaces import Environment
-from openenv_core.env_server.types import State
 
 from models import MyAction, MyObservation, MyState, WebsiteState
 
@@ -40,6 +41,11 @@ class MyEnvironment(Environment):
 
     def __init__(self):
         """Initialize the my_env environment."""
+        # Configure MCP server parameters for Lighthouse
+        self.server_params = StdioServerParameters(
+            command="node",
+            args=["/app/mcp/dist/index.js"]
+        )
         self._state = MyState(
             episode_id=str(uuid4()),
             step_count=0,
@@ -88,63 +94,45 @@ class MyEnvironment(Environment):
         # Update state with the new code
         self._state.site.code = code_dict
 
-        # Call MCP lighthouse audit and extract all scores
+        # Call MCP lighthouse audit using SDK
         reward = 0.0
         if html_content:
             try:
-                # First, serve the HTML
-                serve_result = subprocess.run(
-                    ["node", "/app/mcp/dist/index.js"],
-                    input=json.dumps({
-                        "jsonrpc": "2.0",
-                        "id": 1,
-                        "method": "tools/call",
-                        "params": {
-                            "name": "serve_html",
-                            "arguments": {
-                                "html_content": html_content,
-                                "filename": "index.html"
-                            }
-                        }
-                    }),
-                    capture_output=True,
-                    text=True,
-                    timeout=10
-                )
+                import asyncio
 
-                # Then run lighthouse audit for all categories
-                audit_result = subprocess.run(
-                    ["node", "/app/mcp/dist/index.js"],
-                    input=json.dumps({
-                        "jsonrpc": "2.0",
-                        "id": 2,
-                        "method": "tools/call",
-                        "params": {
-                            "name": "audit_with_lighthouse",
-                            "arguments": {}
-                        }
-                    }),
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
+                async def run_lighthouse_audit():
+                    async with stdio_client(self.server_params) as (read, write):
+                        async with ClientSession(read, write) as session:
+                            await session.initialize()
+
+                            # First, serve the HTML
+                            serve_result = await session.call_tool(
+                                "serve_html",
+                                arguments={
+                                    "html_content": html_content,
+                                    "filename": "index.html"
+                                }
+                            )
+
+                            # Then run lighthouse audit for all categories
+                            audit_result = await session.call_tool(
+                                "audit_with_lighthouse",
+                                arguments={}
+                            )
+
+                            return audit_result
+
+                # Run the async function
+                audit_result = asyncio.run(run_lighthouse_audit())
 
                 # Parse the lighthouse response to extract all scores
-                if audit_result.returncode == 0:
+                if audit_result and audit_result.content:
                     try:
-                        # The MCP server returns JSON-RPC response
-                        response = json.loads(audit_result.stdout)
-                        audit_json = None
+                        # Extract text from the first content item
+                        content_text = audit_result.content[0].text
+                        audit_json = json.loads(content_text)
 
-                        # Extract the result content
-                        if "result" in response and "content" in response["result"]:
-                            content_list = response["result"]["content"]
-                            if content_list and len(content_list) > 0:
-                                audit_json = json.loads(content_list[0]["text"])
-                        elif "success" in response:
-                            audit_json = response
-
-                        if audit_json and audit_json.get("success"):
+                        if audit_json.get("success"):
                             scores = audit_json["audit"]["scores"]
 
                             # Extract all scores
@@ -162,12 +150,10 @@ class MyEnvironment(Environment):
                             # Use performance score as primary reward
                             reward = float(performance_score)
 
-                    except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
+                    except (json.JSONDecodeError, KeyError, ValueError, TypeError, AttributeError):
                         reward = 0.0
 
-            except subprocess.TimeoutExpired:
-                pass
-            except Exception as e:
+            except Exception:
                 pass
 
         self._state.step_count += 1
