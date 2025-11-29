@@ -14,18 +14,30 @@ from dataclasses import dataclass
 
 from openenv_core.env_server.types import Action, Observation, State
 
+@dataclass(kw_only=True)
+class WebsiteState(State):
+    code: dict
+
 
 @dataclass(kw_only=True)
 class MyAction(Action):
     """Action for the My Env environment - just a message to echo."""
-    code: str
+    site: WebsiteState
 
 
 @dataclass(kw_only=True)
 class MyObservation(Observation):
-    code: str
+    site: WebsiteState
+
+    reward: float
+    done: bool
 
 
 @dataclass(kw_only=True)
 class MyState(State):
-    code: str
+    site: WebsiteState
+
+    performance_scores: list
+    accessibility_scores: list
+    seo_scores: list
+    practices_scores: list
