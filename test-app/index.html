@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample App for Testing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+        }
+
+        .card {
+            background: #f7f7f7;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+
+        .card h2 {
+            color: #764ba2;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .status.active {
+            display: block;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 WebOptEnv Test Application</h1>
+
+        <p>This is a sample web application to demonstrate the WebOptEnv MCP server capabilities.</p>
+
+        <div class="card">
+            <h2>✅ Deployment Test</h2>
+            <p>If you can see this page, the zip deployment worked successfully!</p>
+        </div>
+
+        <div class="card">
+            <h2>📊 Lighthouse Audit</h2>
+            <p>Use the <code>audit_with_lighthouse</code> tool to analyze this page's performance, accessibility, SEO, and best practices.</p>
+        </div>
+
+        <div class="card">
+            <h2>🎯 Performance Optimizations</h2>
+            <ul>
+                <li>Inline CSS for faster initial render</li>
+                <li>Semantic HTML structure</li>
+                <li>Responsive design with mobile-first approach</li>
+                <li>Optimized fonts using system font stack</li>
+                <li>Minimal JavaScript for better performance</li>
+            </ul>
+        </div>
+
+        <button onclick="testInteractivity()">Test Interactivity</button>
+
+        <div class="status" id="status">
+            ✨ Button clicked! JavaScript is working properly.
+        </div>
+    </div>
+
+    <script>
+        function testInteractivity() {
+            const status = document.getElementById('status');
+            status.classList.add('active');
+
+            setTimeout(() => {
+                status.classList.remove('active');
+            }, 3000);
+        }
+
+        console.log('WebOptEnv test application loaded successfully!');
+        console.log('Ready for Lighthouse audit.');
+    </script>
+</body>
+</html>
