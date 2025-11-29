@@ -19,7 +19,8 @@ from mcp.client.stdio import stdio_client
 
 from openenv_core.env_server.interfaces import Environment
 
-from models import MyAction, MyObservation, MyState, WebsiteState
+from ..models import MyAction, MyObservation, MyState, WebsiteState, LighthouseScores
+from .bank_tools import BankManager
 
 
 class MyEnvironment(Environment):
@@ -56,6 +57,7 @@ class MyEnvironment(Environment):
             practices_scores=[]
         )
         self._reset_count = 0
+        self._bank_manager = BankManager()
 
     def reset(self) -> MyObservation:
         """
@@ -64,7 +66,8 @@ class MyEnvironment(Environment):
         Returns:
             MyObservation with initial state
         """
-        site = WebsiteState(code="")
+        project = self._bank_manager.sample_project()
+        site = WebsiteState(code=project.get_state())
         lighthouse_scores = self._get_lighthouse_scores(site)
 
         self._state = MyState(site=site, episode_id=str(uuid4()), step_count=0,
@@ -79,7 +82,6 @@ class MyEnvironment(Environment):
             site=self._state.site,
             reward=0,
             done=False,
-
         )
 
     def step(self, action: MyAction) -> MyObservation:  # type: ignore[override]
