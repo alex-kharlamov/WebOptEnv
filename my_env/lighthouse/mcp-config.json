@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "web-opt-env": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "--network", "host", "web-opt-env-mcp:latest"]
+    }
+  }
+}

@@ -1,0 +1,31 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
+"""
+Data models for the My Env Environment.
+
+The my_env environment is a simple test environment that echoes back messages.
+"""
+
+from dataclasses import dataclass
+
+from openenv_core.env_server.types import Action, Observation, State
+
+
+@dataclass(kw_only=True)
+class MyAction(Action):
+    """Action for the My Env environment - just a message to echo."""
+    code: str
+
+
+@dataclass(kw_only=True)
+class MyObservation(Observation):
+    code: str
+
+
+@dataclass(kw_only=True)
+class MyState(State):
+    code: str
