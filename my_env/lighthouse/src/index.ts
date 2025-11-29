@@ -160,15 +160,41 @@ class WebOptEnvServer {
         await this.stopServer();
       }
 
+      // Create a unique directory for this deployment
+      const deployDir = path.join(TEMP_DIR, `deploy-${Date.now()}`);
+      await fs.mkdir(deployDir, { recursive: true });
+
       // Save zip file to temp location
-      const zipPath = path.join(TEMP_DIR, "deploy.zip");
+      const zipPath = path.join(deployDir, "deploy.zip");
       const zipBuffer = Buffer.from(zipContent, "base64");
       await fs.writeFile(zipPath, zipBuffer);
 
-      // Use the deploy-and-serve script
-      const { stdout, stderr } = await execAsync(
-        `/usr/local/bin/deploy-and-serve --zip "${zipPath}" --port ${port}`
-      );
+      // Unzip the file
+      await execAsync(`unzip -q ${zipPath} -d ${deployDir}`);
+
+      // Find the root directory (assuming the zip contains a single directory)
+      const files = await fs.readdir(deployDir);
+      // const rootDir = files.find(e => e != '__MACOSX' && e !='deploy.zip');
+      const rootDir = '';
+      const appPath = path.join(deployDir, rootDir || '');
+
+
+      // Install dependencies and build
+      await execAsync('npm install', { cwd: appPath });
+      await execAsync('npm run build', { cwd: appPath });
+
+      // Start the server using serve package
+      const serveProcess = exec('npx serve -s dist -l ' + port, { cwd: appPath });
+      // console.log(`Server started on port ${port} with dist dir`);
+      
+      // Store the process reference for later cleanup
+      // this.expressServer = {
+      //   close: (callback: any) => {
+      //     serveProcess.kill();
+      //     if (callback) callback();
+      //   }
+      // };
+      // this.currentPort = port;
 
       return {
         content: [
@@ -178,8 +204,7 @@ class WebOptEnvServer {
               {
                 success: true,
                 port: port,
-                message: `Application deployed and serving on port ${port}`,
-                output: stdout,
+                message: `Application built and serving from ${path.join(appPath, 'build')} on port ${port}`,
               },
               null,
               2
@@ -281,15 +306,16 @@ class WebOptEnvServer {
       let url = args.url as string | undefined;
 
       // If no URL provided, use the currently served file
-      if (!url) {
-        if (!this.expressServer || !this.currentHtmlFile) {
-          throw new Error(
-            "No server is currently running. Please serve an HTML file first using serve_html."
-          );
-        }
-        const filename = path.basename(this.currentHtmlFile);
-        url = `http://localhost:${this.currentPort}/${filename}`;
-      }
+      // if (!url) {
+      //   if (!this.expressServer) {
+      //     throw new Error(
+      //       "No server is currently running. Please serve an HTML file first using serve_html."
+      //     );
+      //   }
+      // }
+
+      url = `http://localhost:${this.currentPort}`;
+
 
       const categories = (args.categories as string[]) || [
         "performance",

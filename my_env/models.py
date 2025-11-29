@@ -36,6 +36,7 @@ class MyObservation(Observation):
 @dataclass(kw_only=True)
 class MyState(State):
     site: WebsiteState
+    project_path: str
 
     performance_scores: list
     accessibility_scores: list
