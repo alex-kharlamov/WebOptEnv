@@ -16,7 +16,7 @@ from uuid import uuid4
 from openenv_core.env_server.interfaces import Environment
 from openenv_core.env_server.types import State
 
-from models import MyAction, MyObservation
+from models import MyAction, MyObservation, MyState, WebsiteState
 
 
 class MyEnvironment(Environment):
@@ -48,14 +48,22 @@ class MyEnvironment(Environment):
         Returns:
             MyObservation with a ready message
         """
-        self._state = State(episode_id=str(uuid4()), step_count=0)
+        site = WebsiteState(code="")
+        lighthouse_scores = self._get_lighthouse_scores(site)
+        
+        self._state = MyState(site=site, episode_id=str(uuid4()), step_count=0,
+         performance_scores=[lighthouse_scores.performance_score], 
+         accessibility_scores=[lighthouse_scores.accessibility_score], 
+         seo_scores=[lighthouse_scores.seo_score],
+          practices_scores=[lighthouse_scores.practices_score])
+
         self._reset_count += 1
 
         return MyObservation(
-            echoed_message="My Env environment ready!",
-            message_length=0,
+            site=self._state.site,
+            reward=0,
             done=False,
-            reward=0.0,
+            
         )
 
     def step(self, action: MyAction) -> MyObservation:  # type: ignore[override]
@@ -93,3 +101,13 @@ class MyEnvironment(Environment):
             Current State with episode_id and step_count
         """
         return self._state
+
+    def _get_lighthouse_scores(self, site: WebsiteState) -> LighthouseScores:
+        
+        # TODO: hellsquirrel Implement Lighthouse scores
+        return LighthouseScores(
+            performance_score=0,
+            accessibility_score=0,
+            seo_score=0,
+            practices_score=0,
+        )

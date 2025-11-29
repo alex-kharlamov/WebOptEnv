@@ -41,3 +41,10 @@ class MyState(State):
     accessibility_scores: list
     seo_scores: list
     practices_scores: list
+
+@dataclass(kw_only=True)
+class LighthouseScores:
+    performance_score: float
+    accessibility_score: float
+    seo_score: float
+    practices_score: float
