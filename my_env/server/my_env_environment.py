@@ -40,7 +40,15 @@ class MyEnvironment(Environment):
 
     def __init__(self):
         """Initialize the my_env environment."""
-        self._state = State(episode_id=str(uuid4()), step_count=0)
+        self._state = MyState(
+            episode_id=str(uuid4()),
+            step_count=0,
+            site=WebsiteState(episode_id=str(uuid4()), step_count=0, code={}),
+            performance_scores=[],
+            accessibility_scores=[],
+            seo_scores=[],
+            practices_scores=[]
+        )
         self._reset_count = 0
 
     def reset(self) -> MyObservation:
@@ -48,14 +56,14 @@ class MyEnvironment(Environment):
         Reset the environment.
 
         Returns:
-            MyObservation with a ready message
+            MyObservation with initial state
         """
         site = WebsiteState(code="")
         lighthouse_scores = self._get_lighthouse_scores(site)
-        
+
         self._state = MyState(site=site, episode_id=str(uuid4()), step_count=0,
-         performance_scores=[lighthouse_scores.performance_score], 
-         accessibility_scores=[lighthouse_scores.accessibility_score], 
+         performance_scores=[lighthouse_scores.performance_score],
+         accessibility_scores=[lighthouse_scores.accessibility_score],
          seo_scores=[lighthouse_scores.seo_score],
           practices_scores=[lighthouse_scores.practices_score])
 
@@ -65,28 +73,22 @@ class MyEnvironment(Environment):
             site=self._state.site,
             reward=0,
             done=False,
-            
+
         )
 
     def step(self, action: MyAction) -> MyObservation:  # type: ignore[override]
-        code = action.code
+        # Get the code dict from the action's site state
+        code_dict = action.site.code
 
-        # Parse the JSON string to get HTML content
+        # Extract HTML content from the code dict
         html_content = ""
-        message = "No HTML content"
+        if "index.html" in code_dict:
+            html_content = code_dict["index.html"]
 
-        try:
-            parsed_data = json.loads(code)
-            # Search for "index.html" key
-            if "index.html" in parsed_data:
-                html_content = parsed_data["index.html"]
-                message = "Found index.html in JSON"
-            else:
-                message = "index.html key not found in JSON"
-        except json.JSONDecodeError as e:
-            message = f"Invalid JSON format: {str(e)}"
+        # Update state with the new code
+        self._state.site.code = code_dict
 
-        # Call MCP lighthouse audit and extract performance score
+        # Call MCP lighthouse audit and extract all scores
         reward = 0.0
         if html_content:
             try:
@@ -110,7 +112,7 @@ class MyEnvironment(Environment):
                     timeout=10
                 )
 
-                # Then run lighthouse audit
+                # Then run lighthouse audit for all categories
                 audit_result = subprocess.run(
                     ["node", "/app/mcp/dist/index.js"],
                     input=json.dumps({
@@ -119,9 +121,7 @@ class MyEnvironment(Environment):
                         "method": "tools/call",
                         "params": {
                             "name": "audit_with_lighthouse",
-                            "arguments": {
-                                "categories": ["performance"]
-                            }
+                            "arguments": {}
                         }
                     }),
                     capture_output=True,
@@ -129,77 +129,67 @@ class MyEnvironment(Environment):
                     timeout=30
                 )
 
-                # Parse the lighthouse response to extract performance score
+                # Parse the lighthouse response to extract all scores
                 if audit_result.returncode == 0:
                     try:
                         # The MCP server returns JSON-RPC response
                         response = json.loads(audit_result.stdout)
+                        audit_json = None
 
                         # Extract the result content
                         if "result" in response and "content" in response["result"]:
                             content_list = response["result"]["content"]
                             if content_list and len(content_list) > 0:
-                                # Parse the text content which contains the audit results
                                 audit_json = json.loads(content_list[0]["text"])
+                        elif "success" in response:
+                            audit_json = response
 
-                                if audit_json.get("success"):
-                                    # Extract performance score from the audit results
-                                    performance_score = audit_json["audit"]["scores"]["performance"]["score"]
-                                    reward = float(performance_score)
-                                    message = f"Lighthouse audit completed - Performance score: {performance_score}/100"
-                                else:
-                                    message = f"Audit failed: {audit_json.get('error', 'Unknown error')}"
-                                    reward = 0.0
-                        else:
-                            # Direct JSON response (tool output format)
-                            if "success" in response and response["success"]:
-                                performance_score = response["audit"]["scores"]["performance"]["score"]
-                                reward = float(performance_score)
-                                message = f"Lighthouse audit completed - Performance score: {performance_score}/100"
-                            else:
-                                message = "Unexpected response format"
-                                reward = 0.0
+                        if audit_json and audit_json.get("success"):
+                            scores = audit_json["audit"]["scores"]
+
+                            # Extract all scores
+                            performance_score = scores.get("performance", {}).get("score", 0)
+                            accessibility_score = scores.get("accessibility", {}).get("score", 0)
+                            seo_score = scores.get("seo", {}).get("score", 0)
+                            practices_score = scores.get("best-practices", {}).get("score", 0)
+
+                            # Update state with all scores
+                            self._state.performance_scores.append(performance_score)
+                            self._state.accessibility_scores.append(accessibility_score)
+                            self._state.seo_scores.append(seo_score)
+                            self._state.practices_scores.append(practices_score)
+
+                            # Use performance score as primary reward
+                            reward = float(performance_score)
 
                     except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
-                        message = f"Failed to parse lighthouse results: {str(e)}"
                         reward = 0.0
-                else:
-                    message = f"MCP audit call failed: {audit_result.stderr}"
-                    reward = 0.0
 
             except subprocess.TimeoutExpired:
-                message = "MCP call timeout"
+                pass
             except Exception as e:
-                message = f"Error calling MCP: {str(e)}"
+                pass
 
-        length = len(html_content)
         self._state.step_count += 1
 
         return MyObservation(
-            echoed_message=message,
-            message_length=length,
+            site=self._state.site,
             done=False,
             reward=reward,
-            metadata={
-                "original_message": message,
-                "step": self._state.step_count,
-                "html_length": length,
-                "performance_score": reward
-            },
         )
 
     @property
-    def state(self) -> State:
+    def state(self) -> MyState:
         """
         Get the current environment state.
 
         Returns:
-            Current State with episode_id and step_count
+            Current MyState with all tracking information
         """
         return self._state
 
     def _get_lighthouse_scores(self, site: WebsiteState) -> LighthouseScores:
-        
+
         # TODO: hellsquirrel Implement Lighthouse scores
         return LighthouseScores(
             performance_score=0,
