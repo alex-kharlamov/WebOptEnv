@@ -24,6 +24,8 @@ dependencies = [
     "mcp",
     "Pillow",
     "scikit-image",
+    "anthropic>=0.40.0",
+    "tenacity>=9.0.0",
     # Environment-specific dependencies
     # Add all dependencies needed for your environment here
     # Examples:
