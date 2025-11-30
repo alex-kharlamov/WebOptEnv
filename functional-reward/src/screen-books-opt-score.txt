@@ -1,0 +1,76 @@
+criterion:
+  number: 1
+  assessment: The BookHive logo is visible in the top-left corner with a book icon and the brand name 'BookHive' displayed clearly.
+  score: 1
+
+criterion:
+  number: 2
+  assessment: No search bar is visible in the header area. There is no search input field or search icon present.
+  score: 0
+
+criterion:
+  number: 3
+  assessment: The navigation menu shows 'Explore' and 'My Books' links in the header, both clearly visible and accessible.
+  score: 1
+
+criterion:
+  number: 4
+  assessment: A user profile icon/avatar is visible in the top-right corner of the header.
+  score: 1
+
+criterion:
+  number: 5
+  assessment: The hero section displays a large, prominent headline reading 'Discover Your Next Favorite Book' with good contrast against the purple background.
+  score: 1
+
+criterion:
+  number: 6
+  assessment: The subheadline 'Join thousands of readers sharing reviews and recommendations' is visible below the main headline with appropriate sizing.
+  score: 1
+
+criterion:
+  number: 7
+  assessment: The hero section has a distinctive purple/blue gradient background that creates strong visual contrast and separates it from the content below.
+  score: 1
+
+criterion:
+  number: 8
+  assessment: The 'Featured Books' heading is clearly visible, properly positioned above the book listings with distinct typography.
+  score: 1
+
+criterion:
+  number: 9
+  assessment: Four book cards are displayed in the featured section, each as a distinct card in a horizontal row layout.
+  score: 1
+
+criterion:
+  number: 10
+  assessment: Each book card displays a clear, well-sized book cover image with good quality and proper aspect ratio.
+  score: 1
+
+criterion:
+  number: 11
+  assessment: All four books show their titles clearly: 'The Midnight Library', 'Atomic Habits', 'Project Hail Mary', and 'The Psychology of Money', with consistent formatting.
+  score: 1
+
+criterion:
+  number: 12
+  assessment: Author names are displayed below each book title: Matt Haig, James Clear, Andy Weir, and Morgan Housel, with consistent positioning.
+  score: 1
+
+criterion:
+  number: 13
+  assessment: Each book card displays a star rating visualization with filled stars clearly visible.
+  score: 1
+
+criterion:
+  number: 14
+  assessment: Numerical ratings are shown for each book: 4.2, 4.6, 4.7, and 4.5, positioned next to the star ratings.
+  score: 1
+
+criterion:
+  number: 15
+  assessment: Rating counts are displayed for each book: 1523 ratings, 2841 ratings, 3129 ratings, and 1876 ratings, clearly visible below the star ratings.
+  score: 1
+
+total_score: 14

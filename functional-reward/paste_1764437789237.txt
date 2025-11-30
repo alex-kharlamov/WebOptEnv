@@ -1,0 +1,191 @@
+It is November 2025.
+We are going to use Anthtropic LLMs, in particular Sonnet 4.5, 
+via the Anthropic Python client - available via pip.
+
+Read the Anthropic LLM docs at
+https://platform.claude.com/docs/en/get-started#python
+The relevant snippets from it include:
+
+export ANTHROPIC_API_KEY='your-api-key-here'
+
+But I want to use the Python package manager 'uv' , not pip.
+I need to use at least the following packages:
+  anthropic
+  tenacity
+Create the standard files (pyproject.toml) needed for uv to have these packages available
+
+ # quickstart.py
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+message = client.messages.create(
+    model="claude-sonnet-4-5",
+    max_tokens=1000,
+    messages=[
+        {
+            "role": "user",
+            "content": "What should I search for to find the latest developments in renewable energy?"
+        }
+    ]
+)
+print(message.content)
+```
+
+# Example output
+[TextBlock(text='Here are some effective search strategies for finding the latest renewable energy developments:\n\n**Search Terms to Use:**\n- "renewable energy news 2024"\n- "clean energy breakthroughs"\n- "solar/wind/battery technology advances"\n- "energy storage innovations"\n- "green hydrogen developments"\n- "renewable energy policy updates"\n\n**Reliable Sources to Check:**\n- **News & Analysis:** Reuters Energy, Bloomberg New Energy Finance, Greentech Media, Energy Storage News\n- **Industry Publications:** Renewable Energy World, PV Magazine, Wind Power Engineering\n- **Research Organizations:** International Energy Agency (IEA), National Renewable Energy Laboratory (NREL)\n- **Government Sources:** Department of Energy websites, EPA clean energy updates\n\n**Specific Topics to Explore:**\n- Perovskite and next-gen solar cells\n- Offshore wind expansion\n- Grid-scale battery storage\n- Green hydrogen production\n- Carbon capture technologies\n- Smart grid innovations\n- Energy policy changes and incentives...', type='text')]
+
+# ----------
+
+# For images
+Read
+https://platform.claude.com/docs/en/build-with-claude/working-with-messages
+https://platform.claude.com/docs/en/build-with-claude/vision
+
+The relevant example is:
+```python
+message = client.messages.create(
+    model="claude-sonnet-4-5",
+    max_tokens=32_000,
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/png",
+                        "data": "<base64-encoded PNG bytes here>",
+                    },
+                },
+                {
+                    "type": "text",
+                    "text": "Describe this image.",
+                }
+            ],
+        }
+    ],
+)
+```
+
+Assume we receive the image as a PNG format
+You will need to convert from PNG to base64.
+
+
+Write several LLM helper functions:
+  We will make multiple Anthropic LLM calls during execution of this program.
+  
+  Is it recommended  to store any LLM setup state, e.g. a reference to an Anthropic LLM client to reuse on
+  subsequent invocations to avoid setup overhead? If it is only of
+  marginal benefit, then keep it simple.
+
+  Retrieve Anthropic LLM credentials from the environment variable ANTHROPIC_API_KEY
+
+# LLM Helper
+  anthropic_completion(messages) -> str | None:
+   # asynchronous call
+   # non-streaming completion
+   # Use the tenacity Python library to retry the Anthropic LLM completion
+  call up to 3 times, with exponential jitter delay - but only retry for
+  'retriable' errors, such as rate limit errors.
+
+# LLM Helper
+ anthropic_struct_completion(messages) -> str | None
+   # similar to   anthropic_completion(messages)
+   # BUT it forces output of structured JSON
+   # Follow the documentation in the URL https://platform.claude.com/docs/en/build-with-claude/structured-outputs
+   # Note that you must set the beta header structured-outputs-2025-11-13.
+
+#### Example of how to make Anthropic LLM completoins with structured outputs
+#### Taken from webpage https://platform.claude.com/docs/en/build-with-claude/structured-outputs
+```python
+from pydantic import BaseModel
+import anthropic
+
+class ContactInfo(BaseModel):
+    name: str
+    email: str
+    plan_interest: str
+
+client = anthropic.Anthropic()
+
+response = client.beta.messages.parse(
+    model="claude-sonnet-4-5",
+    betas=["structured-outputs-2025-11-13"],
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "..."}],
+    output_format=ContactInfo,
+)
+
+# Access the parsed output directly
+contact = response.parsed_output
+print(contact.name, contact.email)
+```
+
+# LLM Helper
+ anthropic_multi_completion(prompt_sys=None, prompt_user=None, images:list[bytes]=None)
+   # construct a message data strcture with a system and user prompt
+   # if either is none, omit the blocks from the code
+   # images: a list of images in base64 encoding of PNG bytes format
+
+   
+# Write an example usage file
+In a separate Python file, write an example of using the different LLM
+functions above.
+
+# Write pytests in a separate file
+ * Test the LLM completion calls with a simple user prompt:  What is 2+2?
+
+ * Test the structured output LLM completion call:
+      with a simple user prompt: What is 5*2
+      and ask for the output structure to be a JSON structure of the
+   following type:
+         result_number: 10
+         result_text  : ten
+
+ * Test the image functions by inputting the following and prompting to
+ask for describing the image content in one sentence (max 10 words).
+
+png_bluesquare_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAFElEQVQImWNgYGD4z8DAAAKMDNQBAO+/A3+j9TnOAAAAAElFTkSuQmCC"
+png_redsquare_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+
+
+# Initialize and run
+Activate credential named ANTHROPIC_API_KEY via the manage credentials tool. 
+
+Initialize the project for uv
+
+Then run the tests and iterate until they pass.
+
+Also run the example to check whether it works.
+
+You should generally execute Python programs via
+uv run <python_file> 
+uv run pytest
+
+# Coding Style
+Write the code targeting Python 3.13, using modern Python features tastefully.
+It is November 2025, use up-to-date, modern libraries.
+In Python code, use built-in type annotations (e.g., list instead of List, dict instead of Dict) and the union type operator (e.g., str | None instead of Optional[str]) rather than importing types from the typing module.
+In type hints, use the pipe syntax for union types, like str | None.
+Use the new 'match' pattern conditional statement if there are
+data structure patterns to match, or if there many conditional cases, but not if a simple 'if'
+suffices.
+
+Use relative imports for imports from the same directory, but absolute imports otherwise.
+Prefer os.environ functions to os.getenv , os.setenv
+
+Make an effort to keep much of the original code, as is reasonable.
+Be sparing with comments - only comment tricky bits where most programmers could use some intuition to understand it quickly, or for the motivation of some tricky decision.
+Do not comment individual lines that just call some other functions.
+
+New code you write must follow coding and formatting standards
+enforced by 'ruff', the modern Python linter.
+All strings should use outer double quotes ""  (single quotes '' are
+only allowed when nested inside outer double quotes)
+Do not leave any trailing whitespace - empty lines should have no blanks.
+
+Finally, to check for valid syntax, run each file you have modified through the python compiler via:
+ python -m py_compile modifed_file_1.py

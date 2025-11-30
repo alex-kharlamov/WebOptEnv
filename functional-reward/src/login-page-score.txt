@@ -1,0 +1,61 @@
+criterion:
+  number: 1
+  assessment: The page displays a clear, prominent heading 'Login Page' at the top in large bold text, making it immediately identifiable as a login page.
+  score: 1
+
+criterion:
+  number: 2
+  assessment: The page contains instructional text that reads 'This is where you can log into the secure area. Enter tomsmith for the username and SuperSecretPassword! for the password. If the information is wrong you should see error messages.' This provides clear guidance about the login process.
+  score: 1
+
+criterion:
+  number: 3
+  assessment: The instructional text explicitly displays the example credentials: 'tomsmith' for the username and 'SuperSecretPassword!' for the password, making them clearly visible to users.
+  score: 1
+
+criterion:
+  number: 4
+  assessment: A text input field labeled 'Username' is clearly visible on the page, appearing as a white rectangular field that accepts text input.
+  score: 1
+
+criterion:
+  number: 5
+  assessment: A text input field labeled 'Password' is present below the username field, appearing as a white rectangular field designed to accept password input.
+  score: 1
+
+criterion:
+  number: 6
+  assessment: A blue button labeled 'Login' with an arrow icon is clearly visible below the password field, providing an obvious method to submit credentials.
+  score: 1
+
+criterion:
+  number: 7
+  assessment: The login button includes a visual arrow icon pointing right, which reinforces the action of entering/logging into the system.
+  score: 1
+
+criterion:
+  number: 8
+  assessment: Both the username and password input fields have clear, visible labels ('Username' and 'Password') positioned directly above their respective fields, ensuring accessibility.
+  score: 1
+
+criterion:
+  number: 9
+  assessment: The instructional text explicitly states 'If the information is wrong you should see error messages', indicating that error feedback will be provided for incorrect credentials.
+  score: 1
+
+criterion:
+  number: 10
+  assessment: The page provides a clear Login button that users can click to submit their credentials. The presence of proper form fields suggests Enter key submission would also work in a functional implementation.
+  score: 1
+
+criterion:
+  number: 11
+  assessment: Both input fields appear to be functional text input boxes. The username field would display text plainly, and the password field appears to be a standard password input that would mask entered text appropriately.
+  score: 1
+
+criterion:
+  number: 12
+  assessment: The page maintains excellent visual hierarchy with elements arranged in logical order: heading at top, followed by instructions, then username field, password field, and finally the login button. All elements are clearly distinguishable and properly spaced.
+  score: 1
+
+total_score: 12
