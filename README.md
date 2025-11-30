@@ -15,42 +15,6 @@ tags:
 
 A web optimization environment that uses Lighthouse audits to evaluate and improve web performance, accessibility, SEO, and best practices.
 
-## Quick Start
-
-The simplest way to use the WebOpt environment is through the `WebOptEnv` class:
-
-```python
-from web_opt import WebOptAction, WebOptEnv
-
-try:
-    # Create environment from Docker image
-    web_opt_env = WebOptEnv.from_docker_image("web_opt-env:latest")
-
-    # Reset
-    result = web_opt_env.reset()
-    print(f"Reset: {result.observation.echoed_message}")
-
-    # Send actions
-    actions = [WebOptAction(site=WebsiteState(code={"index.html": "..."}))]
-
-    for action in actions:
-        result = web_opt_env.step(action)
-        print(f"Sent: '{msg}'")
-        print(f"  → Echoed: '{result.observation.echoed_message}'")
-        print(f"  → Length: {result.observation.message_length}")
-        print(f"  → Reward: {result.reward}")
-
-finally:
-    # Always clean up
-    web_opt_env.close()
-```
-
-That's it! The `WebOptEnv.from_docker_image()` method handles:
-- Starting the Docker container
-- Waiting for the server to be ready
-- Connecting to the environment
-- Container cleanup when you call `close()`
-
 ## Building the Docker Image
 
 Before using the environment, you need to build the Docker image:
@@ -59,6 +23,30 @@ Before using the environment, you need to build the Docker image:
 # From project root
 docker build -t web_opt-env:latest -f server/Dockerfile .
 ```
+
+### Running locally
+
+```bash
+# From project root
+docker run -p 8000:8000  web_opt-env:latest
+```
+### Connecting to an Existing Server
+
+If you already have a WebOpt environment server running, you can connect directly:
+
+```python
+from web_opt import WebOptAction, WebOptEnv, WebsiteState
+
+
+# Connect to existing server
+web_opt_env = WebOptEnv(base_url="<ENV_HTTP_URL_HERE>")
+
+# Use as normal
+result = web_opt_env.reset()
+result = web_opt_env.step(WebOptAction(site=WebsiteState(code={...})))
+```
+
+Note: When connecting to an existing server, `web_opt_env.close()` will NOT stop the server.
 
 ## Deploying to Hugging Face Spaces
 
@@ -129,25 +117,6 @@ The deployed space includes:
 - `done` (bool) - Always False for echo environment
 - `metadata` (dict) - Additional info like step count
 
-
-## Advanced Usage
-
-### Connecting to an Existing Server
-
-If you already have a WebOpt environment server running, you can connect directly:
-
-```python
-from web_opt import WebOptEnv
-
-# Connect to existing server
-web_opt_env = WebOptEnv(base_url="<ENV_HTTP_URL_HERE>")
-
-# Use as normal
-result = web_opt_env.reset()
-result = web_opt_env.step(WebOptAction(site=WebsiteState(code={...})))
-```
-
-Note: When connecting to an existing server, `web_opt_env.close()` will NOT stop the server.
 
 ## Development & Testing
 
