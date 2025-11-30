@@ -22,7 +22,6 @@ class WebsiteState(State):
 
 @dataclass(kw_only=True)
 class MyAction(Action):
-    """Action for the My Env environment - just a message to echo."""
     site: WebsiteState
 
 

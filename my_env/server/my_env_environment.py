@@ -65,6 +65,7 @@ class MyEnvironment(Environment):
         self._state = None
         self._reset_count = -1
         self._bank_manager = BankManager()
+        self._project = None
         self.reset()
 
     def reset(self) -> MyObservation:
@@ -74,11 +75,14 @@ class MyEnvironment(Environment):
         Returns:
             MyObservation with initial state
         """
-        project = self._bank_manager.sample_project()
-        site = WebsiteState(code=project.get_state())
+        self._project = self._bank_manager.sample_project()
+        project_path = self._project.path
+        print(f"Temporal project path: {project_path}")
+        
+        site = WebsiteState(code=self._project.get_state())
         
         # Zip the project directory and get base64 encoded string
-        zip_base64 = self._zip_directory_to_base64(project.path)
+        zip_base64 = self._zip_directory_to_base64(project_path)
         
         # Get Lighthouse scores using the zipped project
         lighthouse_scores, screenshot = self._get_lighthouse_scores(zip_base64)
@@ -91,7 +95,7 @@ class MyEnvironment(Environment):
             accessibility_scores=[lighthouse_scores.accessibility_score],
             seo_scores=[lighthouse_scores.seo_score],
             practices_scores=[lighthouse_scores.practices_score],
-            project_path=project.path,
+            project_path=project_path,
             reference_screenshot=screenshot
         )
 
@@ -127,18 +131,30 @@ class MyEnvironment(Environment):
             # Clean up the temporary directory
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+    def _update_local_project_from_action(self, action: MyAction, project_path: str) -> None:
+        """Update the local project from the action."""
+        
+        # Get the code dict from the action's site state
+        code_dict = action.site.code
+
+        for file in code_dict:
+            with open(file, 'w') as f:
+                f.write(code_dict[file])
+
     def step(self, action: MyAction) -> MyObservation:  # type: ignore[override]
+        if isinstance(action.site, str):
+            code_dict = json.loads(action.site)
+            action = MyAction(site=WebsiteState(code=code_dict))
+        
         # Get the project path from state
-        project_path = self._state.project_path
+        project_path = self._project.path
+        
+        # Update the local project from the action
+        self._update_local_project_from_action(action, project_path)
+        self._state.site = WebsiteState(code=self._project.get_state())
         
         # Zip the project directory and get base64 encoded string
         zip_base64 = self._zip_directory_to_base64(project_path)
-        
-        # # Get the code dict from the action's site state
-        # code_dict = action.site.code
-
-        # # Update state with the new code
-        # self._state.site.code = code_dict
 
         # Get Lighthouse scores
         lighthouse_scores, screenshot = self._get_lighthouse_scores(zip_base64)
@@ -322,7 +338,7 @@ class MyEnvironment(Environment):
         def psnr(screen, reference):
             # Returns PSNR score between two images clipped to [0, 100] range
             
-            psnr_score = peak_signal_noise_ratio(np.array(screen), np.array(reference))
+            psnr_score = peak_signal_noise_ratio(np.array(screen.resize(reference.size)), np.array(reference))
             psnr_score = np.clip(psnr_score, 0, 100)
             return psnr_score
 

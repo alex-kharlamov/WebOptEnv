@@ -44,6 +44,28 @@ def folder_to_state(root_path: str) -> dict:
 class Project:
     def __init__(self, path: str, root: str):
         self.path = os.path.join(root, path)
+        self.path = self._copy_project_to_temp(self)
+    
+    def _copy_project_to_temp(self, project) -> str:
+        """Copy project from bank to a temp directory and return the path."""
+        import shutil
+        import tempfile
+        import os
+        
+        # Create or clean the current_project directory
+        temp_dir = os.path.join(tempfile.gettempdir(), "current_project")
+        
+        # Remove existing directory if it exists
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        
+        # Create the directory
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # Copy the project files
+        shutil.copytree(project.path, temp_dir, dirs_exist_ok=True)
+        
+        return temp_dir
 
     def validate(self) -> bool:
         return True
