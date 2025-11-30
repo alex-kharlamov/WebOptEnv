@@ -1,0 +1,28 @@
+#root {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; 
+}
+
+.roll-btn {
+  position: absolute; 
+  bottom: 5vh; 
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: #ac59cb;
+  color: white;
+  font-size: 1.2em;
+  padding: 0.8em 1.5em;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(172, 89, 203, 0.4);
+  cursor: pointer;
+}
+
+.roll-btn:hover {
+  background: #bf6edb;
+  border-color: #bf6edb;
+}

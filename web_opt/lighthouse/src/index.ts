@@ -212,6 +212,17 @@ class WebOptEnvServer {
       const appPath = path.join(deployDir, rootDir || '');
       console.error(`[DeployZip] Application path: ${appPath}`);
 
+      // Read project name from package.json
+      let projectName = 'unknown';
+      try {
+        const packageJsonPath = path.join(appPath, 'package.json');
+        const packageJsonContent = await fs.readFile(packageJsonPath, 'utf-8');
+        const packageJson = JSON.parse(packageJsonContent);
+        projectName = packageJson.name || 'unknown';
+        console.error(`[DeployZip] Project name: ${projectName}`);
+      } catch (err) {
+        console.error(`[DeployZip] Could not read project name from package.json`);
+      }
 
       // Install dependencies and build
       console.error(`[DeployZip] Installing dependencies in ${appPath}...`);
@@ -233,7 +244,7 @@ class WebOptEnvServer {
         await fs.access(distPath);
         console.error(`[DeployZip] Dist directory exists at ${distPath}`);
         const distContents = await fs.readdir(distPath);
-        console.error(`[DeployZip] Dist contents: ${distContents.join(', ')}`);
+        console.error(`[DeployZip] Project "${projectName}" build directory contains: ${distContents.join(', ')}`);
       } catch (err) {
         console.error(`[DeployZip] ERROR: Build directory not found at ${distPath}`);
         throw new Error(`Build directory not found at ${distPath}`);
