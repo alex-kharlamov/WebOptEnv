@@ -55,7 +55,7 @@ class Project:
 class BankManager:
     def __init__(self):
         self._bank_root = os.path.join(os.path.dirname(__file__), "website_bank/")
-        self._all_projects = [Project(path, root=self._bank_root) for path in listdir(self._bank_root)]
+        self._all_projects = [Project(path, root=self._bank_root) for path in listdir(self._bank_root) if path != ".DS_Store"]
         logging.info(f"Found {len(self._all_projects)} projects in {self._bank_root}")
 
         self.projects = []

@@ -13,6 +13,7 @@ The my_env environment is a simple test environment that echoes back messages.
 from dataclasses import dataclass
 
 from openenv_core.env_server.types import Action, Observation, State
+from PIL import Image
 
 @dataclass(kw_only=True)
 class WebsiteState(State):
@@ -37,6 +38,7 @@ class MyObservation(Observation):
 class MyState(State):
     site: WebsiteState
     project_path: str
+    reference_screenshot: Image
 
     performance_scores: list
     accessibility_scores: list
@@ -49,3 +51,10 @@ class LighthouseScores:
     accessibility_score: float
     seo_score: float
     practices_score: float
+
+
+@dataclass(kw_only=True)
+class VerificationScores:
+    psnr_score: float
+    isomorphism_score: float
+

@@ -14,6 +14,7 @@ import lighthouse from "lighthouse";
 import * as chromeLauncher from "chrome-launcher";
 import { exec } from "child_process";
 import { promisify } from "util";
+import puppeteer from 'puppeteer-core';
 
 const execAsync = promisify(exec);
 
@@ -131,6 +132,28 @@ class WebOptEnvServer {
             properties: {},
           },
         },
+        {
+          name: "capture_screenshot",
+          description: "Capture a screenshot of a given URL and return it as a base64-encoded PNG.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              url: {
+                type: "string",
+                description: "The URL to capture"
+              },
+              width: {
+                type: "number",
+                description: "Viewport width in pixels (default: 1280)"
+              },
+              height: {
+                type: "number",
+                description: "Viewport height in pixels (default: 800)"
+              }
+            },
+            required: ["url"]
+          }
+        },
       ],
     }));
 
@@ -144,6 +167,8 @@ class WebOptEnvServer {
           return await this.handleAuditWithLighthouse(request.params.arguments);
         case "stop_server":
           return await this.handleStopServer();
+        case "capture_screenshot":
+          return await this.handleCaptureScreenshot(request.params.arguments);
         default:
           throw new Error(`Unknown tool: ${request.params.name}`);
       }
@@ -436,6 +461,76 @@ class WebOptEnvServer {
           },
         ],
         isError: true,
+      };
+    }
+  }
+
+  private async handleCaptureScreenshot(args: any) {
+    try {
+      const url = args.url as string;
+      const width = args.width || 1280;
+      const height = args.height || 800;
+
+      // Launch Chrome
+      const chrome = await chromeLauncher.launch({
+        chromeFlags: ['--headless', '--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage']
+      });
+
+      try {
+        // Connect to Chrome
+        const response = await fetch(`http://localhost:${chrome.port}/json/version`);
+        const { webSocketDebuggerUrl } = await response.json();
+        const browser = await puppeteer.connect({
+          browserWSEndpoint: webSocketDebuggerUrl.replace('localhost', '127.0.0.1')
+        });
+
+        try {
+          const page = await browser.newPage();
+          await page.setViewport({ width, height });
+          
+          // Navigate to the URL and wait until the network is idle
+          await page.goto(url, { 
+            waitUntil: 'networkidle2', 
+            timeout: 30000 
+          });
+          
+          // Wait a bit more for any lazy-loaded content
+          await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 2000)));
+          
+          // Take full page screenshot
+          const screenshot = await page.screenshot({ 
+            type: 'png',
+            fullPage: true,
+            encoding: 'base64'
+          });
+
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                screenshot: `data:image/png;base64,${screenshot}`,
+                width: await page.evaluate(() => document.documentElement.scrollWidth),
+                height: await page.evaluate(() => document.documentElement.scrollHeight)
+              })
+            }]
+          };
+        } finally {
+          await browser.disconnect();
+        }
+      } finally {
+        await chrome.kill();
+      }
+    } catch (error) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+          })
+        }],
+        isError: true
       };
     }
   }

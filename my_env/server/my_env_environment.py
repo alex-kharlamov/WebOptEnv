@@ -16,12 +16,21 @@ from uuid import uuid4
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
+from networkx import isomorphism
+
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp import ClientSession
+from mcp.client.stdio import StdioServerParameters
+from io import BytesIO
+from PIL import Image
+import base64
+from skimage.metrics import peak_signal_noise_ratio
+import numpy as np
 
 from openenv_core.env_server.interfaces import Environment
 
-from ..models import MyAction, MyObservation, MyState, WebsiteState, LighthouseScores
+from ..models import MyAction, MyObservation, MyState, WebsiteState, LighthouseScores, VerificationScores
 from .bank_tools import BankManager
 
 LOCAL = True
@@ -72,7 +81,7 @@ class MyEnvironment(Environment):
         zip_base64 = self._zip_directory_to_base64(project.path)
         
         # Get Lighthouse scores using the zipped project
-        lighthouse_scores = self._get_lighthouse_scores(zip_base64)
+        lighthouse_scores, screenshot = self._get_lighthouse_scores(zip_base64)
 
         self._state = MyState(
             site=site, 
@@ -82,7 +91,8 @@ class MyEnvironment(Environment):
             accessibility_scores=[lighthouse_scores.accessibility_score],
             seo_scores=[lighthouse_scores.seo_score],
             practices_scores=[lighthouse_scores.practices_score],
-            project_path=project.path
+            project_path=project.path,
+            reference_screenshot=screenshot
         )
 
         self._reset_count += 1
@@ -131,16 +141,17 @@ class MyEnvironment(Environment):
         # self._state.site.code = code_dict
 
         # Get Lighthouse scores
-        lighthouse_scores = self._get_lighthouse_scores(zip_base64)
-        
-        # Update state with all scores
+        lighthouse_scores, screenshot = self._get_lighthouse_scores(zip_base64)
+        verification_scores = self._run_verification_audit(screenshot)
+        print("Verification scores:", verification_scores)
+                
+        # Use performance score as primary reward
+        reward = self._estimate_reward(lighthouse_scores, verification_scores)
+
         self._state.performance_scores.append(lighthouse_scores.performance_score)
         self._state.accessibility_scores.append(lighthouse_scores.accessibility_score)
         self._state.seo_scores.append(lighthouse_scores.seo_score)
         self._state.practices_scores.append(lighthouse_scores.practices_score)
-        
-        # Use performance score as primary reward
-        reward = float(lighthouse_scores.performance_score)
 
         self._state.step_count += 1
 
@@ -149,6 +160,27 @@ class MyEnvironment(Environment):
             done=True,
             reward=reward,
         )
+
+    def _estimate_reward(self, scores: LighthouseScores, verification: VerificationScores) -> float:
+        """Estimate the reward based on the Lighthouse scores."""
+
+        prev_accessibility_score = self._state.accessibility_scores[-1]
+        prev_seo_score = self._state.seo_scores[-1]
+        prev_practices_score = self._state.practices_scores[-1]
+        prev_performance_score = self._state.performance_scores[-1]
+
+        psnr_score = verification.psnr_score / 100 # [0, 100] where 100 means ideal match -> [0, 1]
+
+        reward = np.mean([
+            scores.performance_score - prev_performance_score,
+            scores.accessibility_score - prev_accessibility_score,
+            scores.seo_score - prev_seo_score,
+            scores.practices_score - prev_practices_score
+        ])
+
+        reward = reward * psnr_score
+        
+        return reward
 
     @property
     def state(self) -> MyState:
@@ -159,6 +191,34 @@ class MyEnvironment(Environment):
             Current MyState with all tracking information
         """
         return self._state
+
+        
+    async def _capture_screenshot(url='http://localhost:8080'):
+        server = StdioServerParameters(
+            command="npx",
+            args=["-y", "@automatalabs/mcp-server-playwright"]
+        )
+
+        async with stdio_client(server) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+
+                # Navigate to a webpage
+                await session.call_tool(
+                    "browser_navigate",
+                    arguments={"url": url}
+                )
+                # Take screenshot
+                screenshot = await session.call_tool(
+                    "browser_screenshot",
+                    arguments={
+                        "fullPage": True
+                    }
+                )
+                png_bytes = base64.b64decode(screenshot.content[1].data)
+                buffer = BytesIO(png_bytes)
+                img = Image.open(buffer)
+                return img
 
     def _run_lighthouse_audit(self, zip_base64: str) -> dict:
         """Run Lighthouse audit on the deployed zip.
@@ -189,9 +249,27 @@ class MyEnvironment(Environment):
                         arguments={}
                     )
 
+                    screenshot = await session.call_tool(
+                        "capture_screenshot",
+                        arguments={
+                            "url": "http://localhost:8080",
+                            "width": 1280,
+                            "height": 800
+                        }
+                    )
+                    screenshot_text = screenshot.content[0].text
+                    screenshot_result = json.loads(screenshot_text)['screenshot']
+                    image_data = screenshot_result.replace('data:image/png;base64,','')
+
+                    png_bytes = base64.b64decode(image_data)
+                    buffer = BytesIO(png_bytes)
+                    screenshot = Image.open(buffer)
+
                     if audit_result and audit_result.content:
                         content_text = audit_result.content[0].text
-                        return json.loads(content_text)
+                        result = json.loads(content_text)
+                        result['screenshot'] = screenshot
+                        return result
                     return {}
         
         # Check if we're already in an event loop
@@ -204,7 +282,7 @@ class MyEnvironment(Environment):
         except RuntimeError:  # No event loop running
             return asyncio.run(run_async())
 
-    def _get_lighthouse_scores(self, zip_base64: str) -> LighthouseScores:
+    def _get_lighthouse_scores(self, zip_base64: str) -> Tuple[LighthouseScores, Image]:
         """Get Lighthouse scores for the given site.
         
         Args:
@@ -225,7 +303,7 @@ class MyEnvironment(Environment):
                     accessibility_score=scores.get("accessibility", {}).get("score", 0),
                     seo_score=scores.get("seo", {}).get("score", 0),
                     practices_score=scores.get("best-practices", {}).get("score", 0)
-                )
+                ), audit_result['screenshot']
         except Exception as e:
             print(f"Error running Lighthouse audit: {e}")
             
@@ -235,4 +313,23 @@ class MyEnvironment(Environment):
             accessibility_score=0,
             seo_score=0,
             practices_score=0
+        ), None
+
+
+    def _run_verification_audit(self, new_screenshot: Image) -> VerificationScores:
+        """Run Verification audit on the deployed zip."""
+
+        def psnr(screen, reference):
+            # Returns PSNR score between two images clipped to [0, 100] range
+            
+            psnr_score = peak_signal_noise_ratio(np.array(screen), np.array(reference))
+            psnr_score = np.clip(psnr_score, 0, 100)
+            return psnr_score
+
+        return VerificationScores(
+            psnr_score=psnr(new_screenshot, self.state.reference_screenshot),
+            isomorphism_score=0
         )
+
+
+        

@@ -22,6 +22,8 @@ dependencies = [
     "uvicorn>=0.24.0",
     "requests>=2.31.0",
     "mcp",
+    "Pillow",
+    "scikit-image",
     # Environment-specific dependencies
     # Add all dependencies needed for your environment here
     # Examples:
