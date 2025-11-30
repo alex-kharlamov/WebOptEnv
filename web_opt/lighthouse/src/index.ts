@@ -205,21 +205,38 @@ class WebOptEnvServer {
 
 
       // Install dependencies and build
+      console.error(`Installing dependencies in ${appPath}...`);
       await execAsync('npm install', { cwd: appPath });
+      console.error(`Building application...`);
       await execAsync('npm run build', { cwd: appPath });
 
-      // Start the server using serve package
-      const serveProcess = exec('npx serve -s dist -l ' + port, { cwd: appPath });
-      // console.log(`Server started on port ${port} with dist dir`);
-      
-      // Store the process reference for later cleanup
-      // this.expressServer = {
-      //   close: (callback: any) => {
-      //     serveProcess.kill();
-      //     if (callback) callback();
-      //   }
-      // };
-      // this.currentPort = port;
+      // Use Express to serve the built files instead of npx serve
+      const distPath = path.join(appPath, 'dist');
+
+      // Check if dist directory exists
+      try {
+        await fs.access(distPath);
+        console.error(`Dist directory exists at ${distPath}`);
+        const distContents = await fs.readdir(distPath);
+        console.error(`Dist contents: ${distContents.join(', ')}`);
+      } catch (err) {
+        throw new Error(`Build directory not found at ${distPath}`);
+      }
+
+      this.expressApp = express();
+      this.expressApp.use(express.static(distPath));
+
+      await new Promise<void>((resolve, reject) => {
+        this.expressServer = this.expressApp!.listen(port, '0.0.0.0', () => {
+          this.currentPort = port;
+          console.error(`Express server started successfully on 0.0.0.0:${port} serving ${distPath}`);
+          resolve();
+        });
+        this.expressServer.on("error", (err: Error) => {
+          console.error(`Express server error: ${err}`);
+          reject(err);
+        });
+      });
 
       return {
         content: [
@@ -279,7 +296,7 @@ class WebOptEnvServer {
       this.expressApp.use(express.static(TEMP_DIR));
 
       await new Promise<void>((resolve, reject) => {
-        this.expressServer = this.expressApp!.listen(port, () => {
+        this.expressServer = this.expressApp!.listen(port, '0.0.0.0', () => {
           this.currentPort = port;
           resolve();
         });
@@ -331,15 +348,14 @@ class WebOptEnvServer {
       let url = args.url as string | undefined;
 
       // If no URL provided, use the currently served file
-      // if (!url) {
-      //   if (!this.expressServer) {
-      //     throw new Error(
-      //       "No server is currently running. Please serve an HTML file first using serve_html."
-      //     );
-      //   }
-      // }
-
-      url = `http://localhost:${this.currentPort}`;
+      if (!url) {
+        if (!this.expressServer) {
+          throw new Error(
+            "No server is currently running. Please deploy first using deploy_zip."
+          );
+        }
+        url = `http://localhost:${this.currentPort}`;
+      }
 
 
       const categories = (args.categories as string[]) || [
@@ -487,18 +503,18 @@ class WebOptEnvServer {
         try {
           const page = await browser.newPage();
           await page.setViewport({ width, height });
-          
+
           // Navigate to the URL and wait until the network is idle
-          await page.goto(url, { 
-            waitUntil: 'networkidle2', 
-            timeout: 30000 
+          await page.goto(url, {
+            waitUntil: 'networkidle2',
+            timeout: 30000
           });
-          
+
           // Wait a bit more for any lazy-loaded content
           await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 2000)));
-          
+
           // Take full page screenshot
-          const screenshot = await page.screenshot({ 
+          const screenshot = await page.screenshot({
             type: 'png',
             fullPage: true,
             encoding: 'base64'

@@ -334,6 +334,8 @@ class WebOptEnvironment(Environment):
 
         def psnr(screen, reference):
             # Returns PSNR score between two images clipped to [0, 100] range
+            if screen is None or reference is None:
+                return 0
 
             psnr_score = peak_signal_noise_ratio(np.array(screen.resize(reference.size)), np.array(reference))
             psnr_score = np.clip(psnr_score, 0, 100)
