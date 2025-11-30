@@ -176,9 +176,11 @@ class WebOptEnvServer {
   }
 
   private async handleDeployZip(args: any) {
+    console.error('[DeployZip] Starting deployment process');
     try {
       const zipContent = args.zip_content as string;
       const port = (args.port as number) || DEFAULT_PORT;
+      console.error(`[DeployZip] Port: ${port}, Zip content size: ${zipContent.length} bytes`);
 
       // Stop existing server if running
       if (this.expressServer) {
@@ -187,56 +189,76 @@ class WebOptEnvServer {
 
       // Create a unique directory for this deployment
       const deployDir = path.join(TEMP_DIR, `deploy-${Date.now()}`);
+      console.error(`[DeployZip] Creating deployment directory: ${deployDir}`);
       await fs.mkdir(deployDir, { recursive: true });
 
       // Save zip file to temp location
       const zipPath = path.join(deployDir, "deploy.zip");
       const zipBuffer = Buffer.from(zipContent, "base64");
+      console.error(`[DeployZip] Writing zip file to: ${zipPath}`);
       await fs.writeFile(zipPath, zipBuffer);
+      console.error(`[DeployZip] Zip file written, size: ${zipBuffer.length} bytes`);
 
       // Unzip the file
+      console.error(`[DeployZip] Extracting zip file`);
       await execAsync(`unzip -q ${zipPath} -d ${deployDir}`);
+      console.error(`[DeployZip] Zip extraction complete`);
 
       // Find the root directory (assuming the zip contains a single directory)
       const files = await fs.readdir(deployDir);
+      console.error(`[DeployZip] Files in deployment directory: ${files.join(', ')}`);
       // const rootDir = files.find(e => e != '__MACOSX' && e !='deploy.zip');
       const rootDir = '';
       const appPath = path.join(deployDir, rootDir || '');
+      console.error(`[DeployZip] Application path: ${appPath}`);
 
 
       // Install dependencies and build
-      console.error(`Installing dependencies in ${appPath}...`);
+      console.error(`[DeployZip] Installing dependencies in ${appPath}...`);
+      const installStart = Date.now();
       await execAsync('npm install', { cwd: appPath });
-      console.error(`Building application...`);
+      console.error(`[DeployZip] Dependencies installed in ${Date.now() - installStart}ms`);
+
+      console.error(`[DeployZip] Building application...`);
+      const buildStart = Date.now();
       await execAsync('npm run build', { cwd: appPath });
+      console.error(`[DeployZip] Build completed in ${Date.now() - buildStart}ms`);
 
       // Use Express to serve the built files instead of npx serve
       const distPath = path.join(appPath, 'dist');
+      console.error(`[DeployZip] Looking for dist directory at: ${distPath}`);
 
       // Check if dist directory exists
       try {
         await fs.access(distPath);
-        console.error(`Dist directory exists at ${distPath}`);
+        console.error(`[DeployZip] Dist directory exists at ${distPath}`);
         const distContents = await fs.readdir(distPath);
-        console.error(`Dist contents: ${distContents.join(', ')}`);
+        console.error(`[DeployZip] Dist contents: ${distContents.join(', ')}`);
       } catch (err) {
+        console.error(`[DeployZip] ERROR: Build directory not found at ${distPath}`);
         throw new Error(`Build directory not found at ${distPath}`);
       }
 
+      console.error(`[DeployZip] Creating Express app`);
       this.expressApp = express();
       this.expressApp.use(express.static(distPath));
+      console.error(`[DeployZip] Express app configured to serve static files from ${distPath}`);
 
+      console.error(`[DeployZip] Starting Express server on 0.0.0.0:${port}`);
       await new Promise<void>((resolve, reject) => {
         this.expressServer = this.expressApp!.listen(port, '0.0.0.0', () => {
           this.currentPort = port;
-          console.error(`Express server started successfully on 0.0.0.0:${port} serving ${distPath}`);
+          console.error(`[DeployZip] ✓ Express server started successfully on 0.0.0.0:${port} serving ${distPath}`);
+          console.error(`[DeployZip] Server accessible at http://localhost:${port}`);
           resolve();
         });
         this.expressServer.on("error", (err: Error) => {
-          console.error(`Express server error: ${err}`);
+          console.error(`[DeployZip] ERROR: Express server error: ${err.message}`);
+          console.error(`[DeployZip] Error stack: ${err.stack}`);
           reject(err);
         });
       });
+      console.error(`[DeployZip] Deployment complete and server running`);
 
       return {
         content: [
@@ -255,6 +277,12 @@ class WebOptEnvServer {
         ],
       };
     } catch (error: any) {
+      console.error(`[DeployZip] ERROR: Deployment failed`);
+      console.error(`[DeployZip] Error message: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`[DeployZip] Error stack: ${error.stack}`);
+      if (error.stderr) {
+        console.error(`[DeployZip] Stderr: ${error.stderr}`);
+      }
       return {
         content: [
           {
@@ -344,17 +372,22 @@ class WebOptEnvServer {
   }
 
   private async handleAuditWithLighthouse(args: any) {
+    console.error('[Lighthouse] Starting audit');
     try {
       let url = args.url as string | undefined;
 
       // If no URL provided, use the currently served file
       if (!url) {
         if (!this.expressServer) {
+          console.error('[Lighthouse] ERROR: No server is currently running');
           throw new Error(
             "No server is currently running. Please deploy first using deploy_zip."
           );
         }
         url = `http://localhost:${this.currentPort}`;
+        console.error(`[Lighthouse] Using default URL: ${url}`);
+      } else {
+        console.error(`[Lighthouse] Using provided URL: ${url}`);
       }
 
 
@@ -365,11 +398,14 @@ class WebOptEnvServer {
         "seo",
         "pwa",
       ];
+      console.error(`[Lighthouse] Audit categories: ${categories.join(', ')}`);
 
       // Launch Chrome and run Lighthouse
+      console.error('[Lighthouse] Launching Chrome...');
       const chrome = await chromeLauncher.launch({
         chromeFlags: ["--headless", "--disable-gpu", "--no-sandbox"],
       });
+      console.error(`[Lighthouse] Chrome launched on port ${chrome.port}`);
 
       const options = {
         logLevel: "info" as const,
@@ -378,13 +414,20 @@ class WebOptEnvServer {
         port: chrome.port,
       };
 
+      console.error(`[Lighthouse] Running Lighthouse audit on ${url}...`);
+      const auditStart = Date.now();
       const runnerResult = await lighthouse(url, options);
+      console.error(`[Lighthouse] Audit completed in ${Date.now() - auditStart}ms`);
 
+      console.error('[Lighthouse] Closing Chrome...');
       await chrome.kill();
+      console.error('[Lighthouse] Chrome closed');
 
       if (!runnerResult) {
+        console.error('[Lighthouse] ERROR: Lighthouse audit failed to produce results');
         throw new Error("Lighthouse audit failed to produce results");
       }
+      console.error('[Lighthouse] Processing audit results...');
 
       // Extract key metrics
       const report = runnerResult.lhr;
@@ -445,6 +488,8 @@ class WebOptEnvServer {
           });
         }
       }
+      console.error(`[Lighthouse] Found ${results.opportunities.length} opportunities and ${results.diagnostics.length} diagnostics`);
+      console.error(`[Lighthouse] Audit complete with scores: Performance=${results.scores.performance?.score || 'N/A'}, Accessibility=${results.scores.accessibility?.score || 'N/A'}, SEO=${results.scores.seo?.score || 'N/A'}`);
 
       return {
         content: [
@@ -482,43 +527,61 @@ class WebOptEnvServer {
   }
 
   private async handleCaptureScreenshot(args: any) {
+    console.error('[Screenshot] Starting screenshot capture');
     try {
       const url = args.url as string;
       const width = args.width || 1280;
       const height = args.height || 800;
+      console.error(`[Screenshot] URL: ${url}, Viewport: ${width}x${height}`);
 
       // Launch Chrome
+      console.error('[Screenshot] Launching Chrome...');
       const chrome = await chromeLauncher.launch({
         chromeFlags: ['--headless', '--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage']
       });
+      console.error(`[Screenshot] Chrome launched on port ${chrome.port}`);
 
       try {
         // Connect to Chrome
+        console.error('[Screenshot] Connecting to Chrome via WebSocket...');
         const response = await fetch(`http://localhost:${chrome.port}/json/version`);
         const { webSocketDebuggerUrl } = await response.json();
         const browser = await puppeteer.connect({
           browserWSEndpoint: webSocketDebuggerUrl.replace('localhost', '127.0.0.1')
         });
+        console.error('[Screenshot] Connected to Chrome');
 
         try {
+          console.error('[Screenshot] Creating new page...');
           const page = await browser.newPage();
           await page.setViewport({ width, height });
+          console.error('[Screenshot] Viewport set');
 
           // Navigate to the URL and wait until the network is idle
+          console.error(`[Screenshot] Navigating to ${url}...`);
           await page.goto(url, {
             waitUntil: 'networkidle2',
             timeout: 30000
           });
+          console.error('[Screenshot] Page loaded, waiting for lazy content...');
 
           // Wait a bit more for any lazy-loaded content
           await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 2000)));
+          console.error('[Screenshot] Lazy content wait complete');
 
           // Take full page screenshot
+          console.error('[Screenshot] Capturing screenshot...');
           const screenshot = await page.screenshot({
             type: 'png',
             fullPage: true,
             encoding: 'base64'
           });
+          console.error(`[Screenshot] Screenshot captured, size: ${screenshot.length} bytes`);
+
+          const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+          const pageHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+          console.error(`[Screenshot] Page dimensions: ${pageWidth}x${pageHeight}`);
+          console.error('[Screenshot] Screenshot capture complete');
 
           return {
             content: [{
@@ -526,18 +589,25 @@ class WebOptEnvServer {
               text: JSON.stringify({
                 success: true,
                 screenshot: `data:image/png;base64,${screenshot}`,
-                width: await page.evaluate(() => document.documentElement.scrollWidth),
-                height: await page.evaluate(() => document.documentElement.scrollHeight)
+                width: pageWidth,
+                height: pageHeight
               })
             }]
           };
         } finally {
+          console.error('[Screenshot] Disconnecting browser...');
           await browser.disconnect();
+          console.error('[Screenshot] Browser disconnected');
         }
       } finally {
+        console.error('[Screenshot] Closing Chrome...');
         await chrome.kill();
+        console.error('[Screenshot] Chrome closed');
       }
     } catch (error) {
+      console.error('[Screenshot] ERROR: Screenshot capture failed');
+      console.error(`[Screenshot] Error message: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`[Screenshot] Error stack: ${error instanceof Error ? error.stack : 'N/A'}`);
       return {
         content: [{
           type: 'text',
@@ -552,8 +622,10 @@ class WebOptEnvServer {
   }
 
   private async handleStopServer() {
+    console.error('[StopServer] Stopping server...');
     try {
       await this.stopServer();
+      console.error('[StopServer] Server stopped successfully');
       return {
         content: [
           {
@@ -570,6 +642,9 @@ class WebOptEnvServer {
         ],
       };
     } catch (error) {
+      console.error('[StopServer] ERROR: Failed to stop server');
+      console.error(`[StopServer] Error: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`[StopServer] Error stack: ${error instanceof Error ? error.stack : 'N/A'}`);
       return {
         content: [
           {
@@ -591,18 +666,26 @@ class WebOptEnvServer {
 
   private async stopServer(): Promise<void> {
     if (this.expressServer) {
+      console.error('[StopServer] Closing Express server...');
       await new Promise<void>((resolve) => {
-        this.expressServer.close(() => resolve());
+        this.expressServer.close(() => {
+          console.error('[StopServer] Express server closed');
+          resolve();
+        });
       });
       this.expressServer = null;
       this.expressApp = null;
+      console.error('[StopServer] Express server references cleared');
     }
 
     // Clean up temp files
     if (this.currentHtmlFile) {
+      console.error(`[StopServer] Cleaning up temp file: ${this.currentHtmlFile}`);
       try {
         await fs.unlink(this.currentHtmlFile);
+        console.error('[StopServer] Temp file removed');
       } catch (error) {
+        console.error(`[StopServer] Warning: Failed to remove temp file: ${error}`);
         // Ignore errors when cleaning up
       }
       this.currentHtmlFile = null;

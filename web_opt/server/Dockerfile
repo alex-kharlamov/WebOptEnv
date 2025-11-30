@@ -55,7 +55,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     fi
 
 # Node.js builder stage for Lighthouse MCP server
-FROM node:20-slim AS node-builder
+FROM node:22-slim AS node-builder
 
 WORKDIR /app/mcp
 
@@ -102,8 +102,8 @@ RUN apt-get update && apt-get install -y \
     chromium \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 20 for MCP server
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+# Install Node.js 22 for MCP server
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
