@@ -1,0 +1,135 @@
+# Web Page Specification: Login Page Functionality
+
+## Rubriques (Scoring Criteria)
+
+### 1. Page Title and Purpose
+**What to check:** The page clearly identifies itself as a login page
+**Pass criteria:**
+- Page has a prominent heading that indicates this is a login/authentication page
+- The heading is clearly visible and distinguishable from other content
+
+**Fail criteria:**
+- No clear indication that this is a login page
+- Heading is missing or not prominent
+
+---
+
+### 2. Instructional Text
+**What to check:** Instructions for logging in are present and provide necessary information
+**Pass criteria:**
+- Text explains this is for accessing a secure area
+- Provides example credentials or references them (username: "tomsmith", password: "SuperSecretPassword!")
+- Mentions that error messages will appear for incorrect credentials
+- Instructions are readable and positioned near the login form
+
+**Fail criteria:**
+- Instructions are missing or incomplete
+- No mention of expected error handling behavior
+- Example credentials are not communicated
+
+---
+
+### 3. Username Input Field
+**What to check:** A text input field for entering username exists and is functional
+**Pass criteria:**
+- Field is labeled clearly as "Username" (or equivalent)
+- Field accepts text input
+- Field is accessible (has associated label or aria attributes)
+- Field is visible and properly sized for user input
+
+**Fail criteria:**
+- No username input field present
+- Field is not editable
+- Field lacks proper labeling for accessibility
+
+---
+
+### 4. Password Input Field
+**What to check:** A secure password input field exists and is functional
+**Pass criteria:**
+- Field is labeled clearly as "Password" (or equivalent)
+- Field accepts text input
+- Field masks/obscures entered characters for security (password type)
+- Field is accessible (has associated label or aria attributes)
+- Field is visible and properly sized for user input
+
+**Fail criteria:**
+- No password input field present
+- Field is not editable
+- Field does not mask password characters
+- Field lacks proper labeling for accessibility
+
+---
+
+### 5. Login Submit Button
+**What to check:** A button exists to submit login credentials
+**Pass criteria:**
+- Button is clearly labeled (e.g., "Login", "Submit", "Sign In")
+- Button is visually distinct and clickable
+- Button includes appropriate icon or text indicating login action
+- Button is keyboard accessible (can be triggered via keyboard)
+
+**Fail criteria:**
+- No submit button present
+- Button is not interactive
+- Button purpose is unclear
+- Button cannot be activated via keyboard
+
+---
+
+### 6. Form Structure
+**What to check:** Input fields and button are organized in a logical form structure
+**Pass criteria:**
+- Fields are arranged in a logical order (username before password)
+- Submit button is positioned after input fields
+- Form elements are grouped together visually
+- Form can be submitted via Enter key when fields are focused
+
+**Fail criteria:**
+- Elements are not in logical order
+- Form cannot be submitted using standard keyboard interactions
+- Elements are scattered or poorly organized
+
+---
+
+### 7. Visual Hierarchy and Layout
+**What to check:** Content is organized in a clear, usable layout
+**Pass criteria:**
+- Login elements are prominently displayed
+- Adequate spacing between elements for usability
+- Text is readable (sufficient size and contrast)
+- Interactive elements are easily identifiable
+
+**Fail criteria:**
+- Layout is confusing or unclear
+- Elements overlap or are too cramped
+- Text is too small or low contrast
+- Interactive elements are not distinguishable
+
+---
+
+### 8. Accessibility Requirements
+**What to check:** Form is accessible to users with assistive technologies
+**Pass criteria:**
+- All form fields have proper labels (visible or via aria-label)
+- Form can be navigated using keyboard only (Tab, Enter)
+- Button and fields are focusable with visible focus indicators
+- Semantic HTML is used appropriately (form, input, button elements)
+
+**Fail criteria:**
+- Form fields lack proper labels
+- Cannot navigate or submit form via keyboard
+- No focus indicators present
+- Non-semantic elements used without proper ARIA attributes
+
+---
+
+### 9. Credential Information Preservation
+**What to check:** Test credentials mentioned in instructions remain accurate
+**Pass criteria:**
+- Username "tomsmith" is referenced in instructions
+- Password "SuperSecretPassword!" is referenced in instructions
+- The specific credentials are clearly communicated to users
+
+**Fail criteria:**
+- Different credentials are mentione

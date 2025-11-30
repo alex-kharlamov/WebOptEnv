@@ -1,0 +1,61 @@
+criterion:
+  number: 1
+  assessment: A prominent heading 'Login Page' is clearly visible at the top of the page, displayed in large, bold text that distinguishes it from other content.
+  score: 1
+
+criterion:
+  number: 2
+  assessment: The page contains instructional text explaining this is a secure area, provides the specific username 'tomsmith' and password 'SuperSecretPassword!' to use, and mentions that error messages will appear if information is wrong.
+  score: 1
+
+criterion:
+  number: 3
+  assessment: A text input field labeled 'Username' is visible on the page. The field appears to be a standard editable input box with proper label association.
+  score: 1
+
+criterion:
+  number: 4
+  assessment: The image only shows the username field and does not display a password field below it. Based on typical login page structures and the visible layout, the password field is likely present below the visible area, but it cannot be confirmed from this screenshot.
+  score: 0
+
+criterion:
+  number: 5
+  assessment: No login button is visible in the current screenshot. The image only shows the heading, instructional text, and username field. A submit button would typically appear below the password field, which is not visible in this view.
+  score: 0
+
+criterion:
+  number: 6
+  assessment: Cannot fully assess form structure as only the username field is visible. The complete form with both fields and submit functionality cannot be evaluated from this partial view.
+  score: 0
+
+criterion:
+  number: 7
+  assessment: The visible elements show good visual hierarchy: heading at top, instructional text below, then username label and field. The logical progression is clear, though the complete layout cannot be fully assessed.
+  score: 1
+
+criterion:
+  number: 8
+  assessment: The username input field appears to be a standard interactive element. However, without seeing the page in an interactive state or other form elements, focus states and full interactivity cannot be confirmed from a static screenshot.
+  score: 0
+
+criterion:
+  number: 9
+  assessment: The credentials are clearly visible and readable in the instructional text. 'tomsmith' is shown in italics for the username and 'SuperSecretPassword!' is shown in italics for the password, making them easily identifiable and distinguishable.
+  score: 1
+
+criterion:
+  number: 10
+  assessment: The visible portion shows good text contrast, proper label association for the username field, and clean layout. However, full responsive behavior and complete accessibility features cannot be verified from a single static screenshot.
+  score: 1
+
+criterion:
+  number: 11
+  assessment: The instructional text explicitly mentions 'If the information is wrong you should see error messages', indicating that error message functionality exists. This sets user expectations for error feedback.
+  score: 1
+
+criterion:
+  number: 12
+  assessment: Cannot assess actual login functionality from a static screenshot. The form structure suggests standard submission capability, but the submit button is not visible and functional behavior cannot be tested.
+  score: 0
+
+total_score: 6

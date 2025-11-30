@@ -1,0 +1,113 @@
+# Web Page Functionality Specification: Login Page
+
+## Rubriques (Scoring Criteria)
+
+### 1. Page Title and Heading
+**What to check:** The page displays a clear heading indicating this is a login page.
+**Pass criteria:**
+- A prominent heading (e.g., "Login Page" or equivalent) is visible at the top of the page
+- The heading is distinguishable from other text through size, weight, or styling
+
+---
+
+### 2. Instructional Text Presence
+**What to check:** The page provides instructions about login credentials and expected behavior.
+**Pass criteria:**
+- Text explaining this is a secure area login is present
+- Instructions about what username to use (e.g., "tomsmith") are included
+- Instructions about what password to use (e.g., "SuperSecretPassword!") are included
+- Information about error messages for incorrect credentials is mentioned
+
+---
+
+### 3. Username Input Field
+**What to check:** A functional input field for entering username exists.
+**Pass criteria:**
+- A text input field labeled "Username" (or equivalent clear label) is present
+- The field is editable and accepts text input
+- The field is properly associated with its label (for accessibility)
+
+---
+
+### 4. Password Input Field
+**What to check:** A functional input field for entering password exists.
+**Pass criteria:**
+- A text input field labeled "Password" (or equivalent clear label) is present
+- The field is editable and accepts text input
+- The field should mask/obscure entered characters (password-type input)
+- The field is properly associated with its label (for accessibility)
+
+---
+
+### 5. Login Submit Button
+**What to check:** A button to submit the login credentials exists and is identifiable.
+**Pass criteria:**
+- A button labeled "Login" (or equivalent action text) is present
+- The button is visually distinguishable as an interactive element
+- The button includes an icon or visual indicator (e.g., arrow/enter icon) that reinforces its purpose
+- The button is clickable/tappable
+
+---
+
+### 6. Form Structure
+**What to check:** The username and password inputs function as a cohesive form.
+**Pass criteria:**
+- Username and password fields are logically grouped
+- The form can be submitted via the login button
+- Keyboard navigation through the form works (tab between fields, enter to submit)
+
+---
+
+### 7. Visual Hierarchy and Layout
+**What to check:** Elements are arranged in a logical, readable order.
+**Pass criteria:**
+- Username field appears before password field
+- Login button appears after the input fields
+- Instructional text appears before or near the input fields
+- Adequate spacing exists between elements for readability
+
+---
+
+### 8. Interactive Element States
+**What to check:** Interactive elements provide visual feedback.
+**Pass criteria:**
+- Input fields show focus state when selected
+- Login button shows hover/focus states when interacted with
+- All interactive elements are keyboard accessible
+
+---
+
+### 9. Credential Information Visibility
+**What to check:** The example credentials provided in instructions are clearly readable.
+**Pass criteria:**
+- The username "tomsmith" is visible and distinguishable as the username to use
+- The password "SuperSecretPassword!" is visible and distinguishable as the password to use
+- These credentials are presented in a way that users can easily copy or remember them
+
+---
+
+### 10. Responsive and Accessible Design
+**What to check:** The page maintains functionality across different contexts.
+**Pass criteria:**
+- Form elements are usable on different screen sizes
+- All form inputs have proper labels for screen readers
+- Color is not the only means of conveying information
+- Text has sufficient contrast against backgrounds
+- Form can be completed using keyboard only
+
+---
+
+### 11. Error Message Notification Area
+**What to check:** The page indicates where error messages will appear.
+**Pass criteria:**
+- The instructional text mentions that error messages will appear for incorrect credentials
+- There is implicit or explicit space for displaying error feedback
+
+---
+
+### 12. Login Functionality
+**What to check:** The form allows submission of credentials.
+**Pass criteria:**
+- The login button triggers form submission
+- The form is capable of sending the entered username and password for authentication
+- Pressing Enter in either input field submits the form (standard form behavior)
