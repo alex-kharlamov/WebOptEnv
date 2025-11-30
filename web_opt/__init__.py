@@ -7,7 +7,7 @@
 """WebOpt Environment - A web optimization environment for HTTP server."""
 
 from .client import WebOptEnv
-from .models import WebOptAction, WebOptObservation
+from .models import WebOptAction, WebOptObservation, WebsiteState, WebOptState
 
-__all__ = ["WebOptAction", "WebOptObservation", "WebOptEnv"]
+__all__ = ["WebOptAction", "WebOptObservation", "WebOptEnv", "WebsiteState", "WebOptState"]
 

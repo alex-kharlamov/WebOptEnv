@@ -11,13 +11,16 @@ This module provides the client for connecting to a WebOpt Environment server
 over HTTP.
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+from io import BytesIO
+import base64
+from PIL import Image
 
 from openenv_core.client_types import StepResult
 from openenv_core.env_server.types import State
 from openenv_core.http_env_client import HTTPEnvClient
 
-from .models import WebOptAction, WebOptObservation
+from .models import WebOptAction, WebOptObservation, WebsiteState, WebOptState
 
 
 class WebOptEnv(HTTPEnvClient[WebOptAction, WebOptObservation]):
@@ -45,18 +48,31 @@ class WebOptEnv(HTTPEnvClient[WebOptAction, WebOptObservation]):
         >>> result = client.step(WebOptAction(message="Test"))
     """
 
+    def __init__(
+        self,
+        base_url: str,
+        request_timeout_s: float = 120.0,
+        default_headers: Optional[Dict[str, str]] = None,
+        provider: Optional["ContainerProvider"] = None,
+    ):
+        super().__init__(base_url, request_timeout_s, default_headers, provider)
+
     def _step_payload(self, action: WebOptAction) -> Dict:
         """
         Convert WebOptAction to JSON payload for step request.
 
         Args:
-            action: WebOptAction instance
+            action: WebOptAction instance containing the website state
 
         Returns:
             Dictionary representation suitable for JSON encoding
         """
         return {
-            "message": action.message,
+            "site": {
+                "code": action.site.code,
+                "episode_id": action.site.episode_id,
+                "step_count": action.site.step_count
+            }
         }
 
     def _parse_result(self, payload: Dict) -> StepResult[WebOptObservation]:
@@ -70,17 +86,25 @@ class WebOptEnv(HTTPEnvClient[WebOptAction, WebOptObservation]):
             StepResult with WebOptObservation
         """
         obs_data = payload.get("observation", {})
+        site_data = obs_data.get("site", {})
+        
+        # Handle the website state
+        site = WebsiteState(
+            code=site_data.get("code", {}),
+            episode_id=site_data.get("episode_id"),
+            step_count=site_data.get("step_count", 0)
+        )
+
+        # Create the observation
         observation = WebOptObservation(
-            echoed_message=obs_data.get("echoed_message", ""),
-            message_length=obs_data.get("message_length", 0),
-            done=payload.get("done", False),
-            reward=payload.get("reward"),
-            metadata=obs_data.get("metadata", {}),
+            site=site,
+            reward=payload.get("reward", 0.0),
+            done=payload.get("done", False)
         )
 
         return StepResult(
             observation=observation,
-            reward=payload.get("reward"),
+            reward=payload.get("reward", 0.0),
             done=payload.get("done", False),
         )
 
@@ -92,9 +116,29 @@ class WebOptEnv(HTTPEnvClient[WebOptAction, WebOptObservation]):
             payload: JSON response from /state endpoint
 
         Returns:
-            State object with episode_id and step_count
+            WebOptState object with website state and metrics
         """
-        return State(
+        site_data = payload.get("site", {})
+        site = WebsiteState(
+            code=site_data.get("code", {}),
+            episode_id=site_data.get("episode_id"),
+            step_count=site_data.get("step_count", 0)
+        )
+        
+        # Convert base64 screenshot back to Image if it exists
+        screenshot_data = payload.get("reference_screenshot")
+        screenshot = None
+        if screenshot_data:
+            screenshot = Image.open(BytesIO(base64.b64decode(screenshot_data)))
+        
+        return WebOptState(
+            site=site,
             episode_id=payload.get("episode_id"),
             step_count=payload.get("step_count", 0),
+            project_path=payload.get("project_path", ""),
+            reference_screenshot=screenshot,
+            performance_scores=payload.get("performance_scores", []),
+            accessibility_scores=payload.get("accessibility_scores", []),
+            seo_scores=payload.get("seo_scores", []),
+            practices_scores=payload.get("practices_scores", [])
         )

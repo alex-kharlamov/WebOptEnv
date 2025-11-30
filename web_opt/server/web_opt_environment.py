@@ -139,9 +139,17 @@ class WebOptEnvironment(Environment):
                 f.write(code_dict[file])
 
     def step(self, action: WebOptAction) -> WebOptObservation:  # type: ignore[override]
-        if isinstance(action.site, str):
+        print(f"Got action: {action}")
+
+        if isinstance(action, dict):
+            action = WebOptAction(site=WebsiteState(code=action['site']['code']))
+
+        elif isinstance(action.site, str):
             code_dict = json.loads(action.site)
             action = WebOptAction(site=WebsiteState(code=code_dict))
+
+        elif isinstance(action.site, dict):
+            action = WebOptAction(site=WebsiteState(code=action.site['code']))
 
         # Get the project path from state
         project_path = self._project.path
