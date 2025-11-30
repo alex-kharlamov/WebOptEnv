@@ -105,17 +105,35 @@ The deployed space includes:
 
 ## Environment Details
 
-### Action
-**MyAction**: Contains a single field
-- `message` (str) - The message to echo back
+### Action Space
+**WebOptAction**: Contains the website state to be evaluated
+- `site` (WebsiteState) - The website state containing the code to be evaluated
+  - `code` (dict) - Dictionary mapping file paths to their content
 
-### Observation
-**MyObservation**: Contains the echo response and metadata
-- `echoed_message` (str) - The message echoed back
-- `message_length` (int) - Length of the message
-- `reward` (float) - Reward based on message length (length × 0.1)
-- `done` (bool) - Always False for echo environment
-- `metadata` (dict) - Additional info like step count
+### Observation Space
+**WebOptObservation**: Contains the evaluation results and metrics
+- `lighthouse_scores` (LighthouseScores) - Scores from Lighthouse audit
+  - `performance_score` (float) - Performance score (0-100)
+  - `accessibility_score` (float) - Accessibility score (0-100)
+  - `seo_score` (float) - SEO score (0-100)
+  - `practices_score` (float) - Best practices score (0-100)
+- `verification_scores` (VerificationScores) - Additional verification metrics
+  - `psnr` (float) - Peak Signal-to-Noise Ratio for visual comparison
+  - `ssim` (float) - Structural Similarity Index Measure
+- `done` (bool) - Whether the episode is complete
+- `metadata` (dict) - Additional metadata including step count and episode ID
+
+### State
+**WebOptState**: Maintains the environment state across steps
+- `site` (WebsiteState) - Current website state
+- `episode_id` (str) - Unique identifier for the episode
+- `step_count` (int) - Current step in the episode
+- `performance_scores` (list[float]) - History of performance scores
+- `accessibility_scores` (list[float]) - History of accessibility scores
+- `seo_scores` (list[float]) - History of SEO scores
+- `practices_scores` (list[float]) - History of best practices scores
+- `project_path` (str) - Path to the current project
+- `reference_screenshot` (str) - Base64 encoded reference screenshot
 
 
 ## Development & Testing
