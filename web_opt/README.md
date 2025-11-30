@@ -129,11 +129,6 @@ The deployed space includes:
 - `done` (bool) - Always False for echo environment
 - `metadata` (dict) - Additional info like step count
 
-### Reward
-The reward is calculated as: `message_length × 0.1`
-- "Hi" → reward: 0.2
-- "Hello, World!" → reward: 1.3
-- Empty message → reward: 0.0
 
 ## Advanced Usage
 
