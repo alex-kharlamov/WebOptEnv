@@ -49,3 +49,6 @@ server = "web_opt.server.app:main"
 include-package-data = true
 packages = ["web_opt", "web_opt.server"]
 package-dir = { "web_opt" = ".", "web_opt.server" = "server" }
+
+[tool.setuptools.package-data]
+"web_opt.server" = ["website_bank/**/*"]

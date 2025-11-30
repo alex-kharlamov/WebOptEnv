@@ -15,6 +15,7 @@ import json
 from uuid import uuid4
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from typing import Tuple
 
 from networkx import isomorphism
 
@@ -33,7 +34,7 @@ from openenv_core.env_server.interfaces import Environment
 from ..models import WebOptAction, WebOptObservation, WebOptState, WebsiteState, LighthouseScores, VerificationScores
 from .bank_tools import BankManager
 
-LOCAL = True
+LOCAL = False
 
 LOCAL_PATH = "/Users/axcel/Documents/IterateHackathon/WebOptEnv/web_opt/lighthouse/dist/index.js"
 
@@ -74,18 +75,18 @@ class WebOptEnvironment(Environment):
         self._project = self._bank_manager.sample_project()
         project_path = self._project.path
         print(f"Temporal project path: {project_path}")
-        
+
         site = WebsiteState(code=self._project.get_state())
-        
+
         # Zip the project directory and get base64 encoded string
         zip_base64 = self._zip_directory_to_base64(project_path)
-        
+
         # Get Lighthouse scores using the zipped project
         lighthouse_scores, screenshot = self._get_lighthouse_scores(zip_base64)
 
         self._state = WebOptState(
-            site=site, 
-            episode_id=str(uuid4()), 
+            site=site,
+            episode_id=str(uuid4()),
             step_count=0,
             performance_scores=[lighthouse_scores.performance_score],
             accessibility_scores=[lighthouse_scores.accessibility_score],
@@ -115,10 +116,10 @@ class WebOptEnvironment(Environment):
         temp_dir = tempfile.mkdtemp()
         try:
             zip_path = os.path.join(temp_dir, 'project.zip')
-            
+
             # Create a zip file
             shutil.make_archive(os.path.join(temp_dir, 'project'), 'zip', directory_path)
-            
+
             # Read the zip file as binary and encode as base64
             with open(zip_path, 'rb') as f:
                 zip_binary = f.read()
@@ -127,9 +128,9 @@ class WebOptEnvironment(Environment):
             # Clean up the temporary directory
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def _update_local_project_from_action(self, action: MyAction, project_path: str) -> None:
+    def _update_local_project_from_action(self, action: WebOptAction, project_path: str) -> None:
         """Update the local project from the action."""
-        
+
         # Get the code dict from the action's site state
         code_dict = action.site.code
 
@@ -141,14 +142,14 @@ class WebOptEnvironment(Environment):
         if isinstance(action.site, str):
             code_dict = json.loads(action.site)
             action = WebOptAction(site=WebsiteState(code=code_dict))
-        
+
         # Get the project path from state
         project_path = self._project.path
-        
+
         # Update the local project from the action
         self._update_local_project_from_action(action, project_path)
         self._state.site = WebsiteState(code=self._project.get_state())
-        
+
         # Zip the project directory and get base64 encoded string
         zip_base64 = self._zip_directory_to_base64(project_path)
 
@@ -156,7 +157,7 @@ class WebOptEnvironment(Environment):
         lighthouse_scores, screenshot = self._get_lighthouse_scores(zip_base64)
         verification_scores = self._run_verification_audit(screenshot)
         print("Verification scores:", verification_scores)
-                
+
         # Use performance score as primary reward
         reward = self._estimate_reward(lighthouse_scores, verification_scores)
 
@@ -191,7 +192,7 @@ class WebOptEnvironment(Environment):
         ])
 
         reward = reward * psnr_score
-        
+
         return reward
 
     @property
@@ -204,7 +205,7 @@ class WebOptEnvironment(Environment):
         """
         return self._state
 
-        
+
     async def _capture_screenshot(url='http://localhost:8080'):
         server = StdioServerParameters(
             command="npx",
@@ -234,10 +235,10 @@ class WebOptEnvironment(Environment):
 
     def _run_lighthouse_audit(self, zip_base64: str) -> dict:
         """Run Lighthouse audit on the deployed zip.
-        
+
         Args:
             zip_base64: Base64 encoded zip content of the project
-            
+
         Returns:
             Dictionary containing the audit scores
         """
@@ -283,7 +284,7 @@ class WebOptEnvironment(Environment):
                         result['screenshot'] = screenshot
                         return result
                     return {}
-        
+
         # Check if we're already in an event loop
         try:
             loop = asyncio.get_running_loop()
@@ -296,10 +297,10 @@ class WebOptEnvironment(Environment):
 
     def _get_lighthouse_scores(self, zip_base64: str) -> Tuple[LighthouseScores, Image]:
         """Get Lighthouse scores for the given site.
-        
+
         Args:
             zip_base64: Base64 encoded zip content of the project
-            
+
         Returns:
             LighthouseScores object with the audit scores
         """
@@ -318,7 +319,7 @@ class WebOptEnvironment(Environment):
                 ), audit_result['screenshot']
         except Exception as e:
             print(f"Error running Lighthouse audit: {e}")
-            
+
         # Return default scores if audit fails
         return LighthouseScores(
             performance_score=0,
@@ -333,7 +334,7 @@ class WebOptEnvironment(Environment):
 
         def psnr(screen, reference):
             # Returns PSNR score between two images clipped to [0, 100] range
-            
+
             psnr_score = peak_signal_noise_ratio(np.array(screen.resize(reference.size)), np.array(reference))
             psnr_score = np.clip(psnr_score, 0, 100)
             return psnr_score
@@ -344,4 +345,3 @@ class WebOptEnvironment(Environment):
         )
 
 
-        

@@ -144,4 +144,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # To run Lighthouse MCP server: CMD ["node", "/app/mcp/dist/index.js"]
 # Note: MCP server dist needs to be built separately and added to web_opt context
 # The MCP server communicates via stdio and can serve web content on port 8080
-CMD ["sh", "-c", "cd /app/env && uvicorn server.app:app --host 0.0.0.0 --port 8000"]
+CMD ["uvicorn", "web_opt.server.app:app", "--host", "0.0.0.0", "--port", "8000"]
